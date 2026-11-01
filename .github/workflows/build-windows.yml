@@ -16,6 +16,16 @@ jobs:
       - name: Add Windows platform
         run: flutter create --platforms=windows --project-name wc_khata --org com.webdsoft .
 
+      - name: Unpack WC Khata project over it
+        shell: pwsh
+        run: |
+          if (!(Test-Path WC_Khata_windows_v1.zip)) { throw "WC_Khata_windows_v1.zip repo mein nahi mili" }
+          Expand-Archive -Path WC_Khata_windows_v1.zip -DestinationPath unpacked -Force
+          Copy-Item -Path unpacked\WC_Khata\* -Destination . -Recurse -Force
+          Remove-Item -Recurse -Force unpacked
+          if (Test-Path test) { Remove-Item -Recurse -Force test }
+          Get-Content lib\main.dart -TotalCount 5
+
       - name: App icon (skipped if it fails)
         continue-on-error: true
         shell: pwsh
@@ -66,8 +76,3 @@ jobs:
         with:
           name: WC_Khata_Setup
           path: installer_out/WC_Khata_Setup.exe
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: WC_Khata_Portable_Folder
-          path: build/windows/x64/runner/Release

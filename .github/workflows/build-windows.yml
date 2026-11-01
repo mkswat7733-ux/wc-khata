@@ -7,9 +7,11 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
 
@@ -28,17 +30,12 @@ jobs:
 
       - name: App icon (skipped if it fails)
         continue-on-error: true
-        shell: pwsh
         run: |
           python -m pip install pillow
-          @'
-          from PIL import Image
-          img = Image.open("assets/icons/app_icon.png").convert("RGBA")
-          img.save("windows/runner/resources/app_icon.ico", sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
-          '@ | Set-Content -Path make_ico.py
-          python make_ico.py
+          python -c "from PIL import Image; Image.open('assets/icons/app_icon.png').convert('RGBA').save('windows/runner/resources/app_icon.ico', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
 
-      - run: flutter pub get
+      - name: Get packages
+        run: flutter pub get
 
       - name: Build Windows release
         env:
@@ -49,31 +46,36 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path windows_installer | Out-Null
-          @'
-          [Setup]
-          AppName=WC Khata
-          AppVersion=1.0.9
-          AppPublisher=webdsoft
-          DefaultDirName={autopf}\WC Khata
-          DefaultGroupName=WC Khata
-          OutputDir=..\installer_out
-          OutputBaseFilename=WC_Khata_Setup
-          Compression=lzma2
-          SolidCompression=yes
-          ArchitecturesInstallIn64BitMode=x64compatible
-          DisableProgramGroupPage=yes
-
-          [Files]
-          Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
-
-          [Icons]
-          Name: "{group}\WC Khata"; Filename: "{app}\wc_khata.exe"
-          Name: "{autodesktop}\WC Khata"; Filename: "{app}\wc_khata.exe"
-
-          [Run]
-          Filename: "{app}\wc_khata.exe"; Description: "Open WC Khata"; Flags: nowait postinstall skipifsilent
-          '@ | Set-Content -Path windows_installer\installer.iss
+          $iss = @(
+            '[Setup]',
+            'AppName=WC Khata',
+            'AppVersion=1.0.9',
+            'AppPublisher=webdsoft',
+            'DefaultDirName={autopf}\WC Khata',
+            'DefaultGroupName=WC Khata',
+            'OutputDir=..\installer_out',
+            'OutputBaseFilename=WC_Khata_Setup',
+            'Compression=lzma2',
+            'SolidCompression=yes',
+            'ArchitecturesInstallIn64BitMode=x64compatible',
+            'DisableProgramGroupPage=yes',
+            '',
+            '[Files]',
+            'Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion',
+            '',
+            '[Icons]',
+            'Name: "{group}\WC Khata"; Filename: "{app}\wc_khata.exe"',
+            'Name: "{autodesktop}\WC Khata"; Filename: "{app}\wc_khata.exe"',
+            '',
+            '[Run]',
+            'Filename: "{app}\wc_khata.exe"; Description: "Open WC Khata"; Flags: nowait postinstall skipifsilent'
+          )
+          $iss | Set-Content -Path windows_installer\installer.iss
           choco install innosetup -y --no-progress
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows_installer\installer.iss
 
-      - uses:
+      - name: Upload Setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: WC_Khata_Setup
+          path: installer_out/WC_Khata_Setup.exe

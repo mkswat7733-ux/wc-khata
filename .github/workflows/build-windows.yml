@@ -21,8 +21,10 @@ jobs:
       - name: Unpack WC Khata project over it
         shell: pwsh
         run: |
-          if (!(Test-Path WC_Khata_windows_v1.zip)) { throw "WC_Khata_windows_v1.zip repo mein nahi mili" }
-          Expand-Archive -Path WC_Khata_windows_v1.zip -DestinationPath unpacked -Force
+          $zip = Get-ChildItem -Filter "WC_Khata*.zip" | Select-Object -First 1
+          if (-not $zip) { throw "Repo mein WC_Khata wali zip nahi mili" }
+          Write-Host "Using zip: $($zip.Name)"
+          Expand-Archive -Path $zip.FullName -DestinationPath unpacked -Force
           Copy-Item -Path unpacked\WC_Khata\* -Destination . -Recurse -Force
           Remove-Item -Recurse -Force unpacked
           if (Test-Path test) { Remove-Item -Recurse -Force test }
